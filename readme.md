@@ -12,7 +12,7 @@
 
 运行截图:
 
-![](demo.png)
+![](demo.gif)
 
 运行后结果到处至`result.csv`
 
