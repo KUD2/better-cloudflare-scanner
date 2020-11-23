@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import requests,time,random,threading
+import requests,time,random,threading,sys
 from concurrent.futures import ThreadPoolExecutor,as_completed
 import config
 class Node:
@@ -17,14 +17,17 @@ class Node:
         if verbose:print(self.ip,self.respond)
 class pline:
     def __init__(self):
-        self.s=''
+        self.l=0
     def clear(self):
-        print('\b'*len(self.s),end='',flush=1);self.s=''
+        sys.stdout.write('\r'+' '*self.l+'\r');sys.stdout.flush()
+        self.l=0
     def refresh(self,s):
         self.clear()
-        print(s,end='',flush=1);self.s=s
+        sys.stdout.write(s);sys.stdout.flush()
+        self.l=len(s)
     def end(self,s):
-        self.clear();print(s)
+        self.clear()
+        print(s)
 def MB(s):
     return s/1024/1024
 def Progress(p):
