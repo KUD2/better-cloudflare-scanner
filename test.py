@@ -15,6 +15,16 @@ class Node:
         if r.status_code==200:
             self.respond=r.elapsed.total_seconds()*1000
         if verbose:print(self.ip,self.respond)
+class pline:
+    def __init__(self):
+        self.s=''
+    def clear(self):
+        print('\b'*len(self.s),end='',flush=1);self.s=''
+    def refresh(self,s):
+        self.clear()
+        print(s,end='',flush=1);self.s=s
+    def end(self,s):
+        self.clear();print(s)
 def MB(s):
     return s/1024/1024
 def Progress(p):
@@ -23,12 +33,11 @@ def Progress(p):
 def respondAll():
     executor=ThreadPoolExecutor(max_workers=config.respond['threads'])
     tasks=[executor.submit(node.Respond) for node in nodes]
-    done=0;lss=''
+    done=0;
+    pl=pline()
     for task in as_completed(tasks):
-        print('\b'*len(lss),end='',flush=1)
         done+=1
-        lss='Testing Respond %s %d/%d'%(Progress(done/len(nodes)),done,len(nodes))
-        print(lss,end='',flush=1)
+        pl.refresh('Testing Respond %s %d/%d'%(Progress(done/len(nodes)),done,len(nodes)))
     print('')
 def speedtest(ip,verbose=1):
     url='http://%s/__down?bytes=%d'%(ip,config.speedtest['size'])
@@ -39,11 +48,12 @@ def speedtest(ip,verbose=1):
     try:r=requests.get(url,headers=headers,stream=True,timeout=config.respond['timeout']/1000)
     except:return 0,0
     if r.status_code!=200:return 0,0        
-    s,lst,ti,lss=0,0,time.time(),''
-    mx,avg=0,0
     st=time.time()
+    s,lst,ti=0,0,time.time()
+    mx,avg=0,0
+    pl=pline()
     try:
-        for chunk in r.iter_content(chunk_size=256):
+        for chunk in r.iter_content(chunk_size=1024):
             if not chunk:continue
             s+=len(chunk)
             t=time.time()-ti
@@ -53,29 +63,26 @@ def speedtest(ip,verbose=1):
             lst=s
             mx=max(mx,speed)
             if verbose:
-                print('\b'*(len(lss)),end='',flush=1)
-                lss='{} {} {:>6.2f}MB/s'.format(ip,Progress(p),speed)
-                print(lss,end='',flush=1)
+                pl.refresh('{} {} {:>6.2f}MB/s'.format(ip,Progress(p),speed))
             ti=time.time()
             if ti-st>config.speedtest['skip']['time'] and mx<config.speedtest['skip']['speed']:
-                print('\b'*len(lss),end='',flush=1)
                 avg=MB(s/(ti-st))
-                print("{:<16} | avg: {:>6.2f}MB/s | max: {:>6.2f}MB/s".format(ip,avg,mx))
+                pl.end("{:<16} | avg: {:>6.2f}MB/s | max: {:>6.2f}MB/s (skip)".format(ip,avg,mx))
                 return avg,mx
     except:
-        if verbose:print('\b'*len(lss),end='',flush=1)
+        if verbose:
+            pl.end('%s error'%ip)
         return 0,0
     ed=time.time()
     if ed-st<0.1:return 0,0
     avg=MB(config.speedtest['size']/(ed-st))
     if verbose:
-        print('\b'*len(lss),end='',flush=1)
-        print("{:<16} | avg: {:>6.2f}MB/s | max: {:>6.2f}MB/s".format(ip,avg,mx))
+        pl.end("{:<16} | avg: {:>6.2f}MB/s | max: {:>6.2f}MB/s".format(ip,avg,mx))
     return avg,mx
 
 def op():
     ret=open('result.csv','w',encoding='utf-8')
-    ret.write("{:<16}, {:<8}, {:<6}, {:<6}\n".format("IP","Respond","Avg(MB/s)","Max(MB/s)"))
+    ret.write("{:<16}, {:<8}, {:<9}, {:<9}\n".format("IP","Respond","Avg(MB/s)","Max(MB/s)"))
     for node in nodes:
         ret.write("{:<16}, {:<8.2f}, {:<6.2f}, {:<6.2f}\n".format(node.ip,node.respond,node.speed[0],node.speed[1]))
 
