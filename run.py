@@ -89,7 +89,9 @@ def op():
     for node in nodes:
         ret.write("{:<16}, {:<8.2f}, {:<6.2f}, {:<6.2f}\n".format(node.ip,node.respond,node.speed[0],node.speed[1]))
 
-nodes=[Node(ip) for ip in open('ips.txt').read().split('\n')]
+nodes=[]
+for ip in open('ips.txt').read().split('\n'):
+    if ip:nodes.append(Node(ip))
 respondAll()
 nodes.sort(key=lambda node:node.respond if node.respond>0 else 1e9)
 if not config.result['all']:
